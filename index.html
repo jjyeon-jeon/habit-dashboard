@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="sage">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>데일리 루틴 & 투두 대시보드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="sage"] {
+      --bg-main: #F6F5F0; --bg-card: #FFFFFF; --bg-subtle: #EFECE6;
+      --bg-today: rgba(95, 116, 100, 0.08); --text-main: #2C302E;
+      --text-muted: #787A75; --border-color: #E4E1DA;
+      --accent: #5F7464; --accent-hover: #4B5D50; --accent-text: #FFFFFF;
+      --accent-soft: #E9EFEA; --secondary: #C87D65; --secondary-soft: #F9EFEA;
+    }
+    [data-theme="mono"] {
+      --bg-main: #F4F4F5; --bg-card: #FFFFFF; --bg-subtle: #E4E4E7;
+      --bg-today: rgba(24, 24, 27, 0.05); --text-main: #18181B;
+      --text-muted: #71717A; --border-color: #E4E4E7;
+      --accent: #18181B; --accent-hover: #3F3F46; --accent-text: #FFFFFF;
+      --accent-soft: #F4F4F5; --secondary: #52525B; --secondary-soft: #F4F4F5;
+    }
+    [data-theme="terracotta"] {
+      --bg-main: #FBF7F4; --bg-card: #FFFFFF; --bg-subtle: #F3EBE4;
+      --bg-today: rgba(184, 93, 67, 0.07); --text-main: #332621;
+      --text-muted: #8C7A70; --border-color: #EADFD7;
+      --accent: #B85D43; --accent-hover: #9E4B33; --accent-text: #FFFFFF;
+      --accent-soft: #F9EBE7; --secondary: #D49A6A; --secondary-soft: #FDF3EB;
+    }
+    [data-theme="dark"] {
+      --bg-main: #16171A; --bg-card: #202227; --bg-subtle: #2B2E35;
+      --bg-today: rgba(142, 168, 150, 0.1); --text-main: #ECECEF;
+      --text-muted: #8E929F; --border-color: #2E323B;
+      --accent: #8EA896; --accent-hover: #799481; --accent-text: #16171A;
+      --accent-soft: #2A332D; --secondary: #D99B78; --secondary-soft: #332A26;
+    }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background-color: var(--bg-main); color: var(--text-main);
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+    .theme-card { background-color: var(--bg-card); border: 1px solid var(--border-color); }
+    .theme-subtle { background-color: var(--bg-subtle); color: var(--text-main); }
+    .theme-muted { color: var(--text-muted); }
+    .theme-border { border-color: var(--border-color); }
+    .btn-accent { background-color: var(--accent); color: var(--accent-text); transition: all 0.2s ease; }
+    .btn-accent:hover { background-color: var(--accent-hover); }
+    .badge-accent { background-color: var(--accent-soft); color: var(--accent); }
+    .badge-secondary { background-color: var(--secondary-soft); color: var(--secondary); }
+    .check-btn {
+      border: 1.5px solid var(--border-color); background-color: transparent; color: transparent;
+      transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .check-btn:hover { border-color: var(--accent); }
+    .check-btn.completed { background-color: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+    .progress-bar-fill { background-color: var(--accent); transition: width 0.4s ease-out; }
+    .progress-bar-secondary { background-color: var(--secondary); transition: width 0.4s ease-out; }
+    .theme-dot {
+      width: 20px; height: 20px; border-radius: 9999px; cursor: pointer;
+      transition: transform 0.15s ease; border: 2px solid transparent;
+    }
+    .theme-dot:hover { transform: scale(1.15); }
+    .theme-dot.active { border-color: var(--text-main); transform: scale(1.15); }
+    input, select { outline: none; }
+  </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+
+  <div class="max-w-5xl mx-auto space-y-5">
+    
+    <!-- 상단 헤더 & 테마 스위처 -->
+    <header class="theme-card p-6 rounded-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2.5">
+          <span class="px-2.5 py-0.5 text-xs font-semibold rounded-md badge-accent" id="dash-badge">WEEKLY LOG</span>
+          <span class="text-sm theme-muted" id="today-date-display"></span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <h1 id="dash-title-text" class="text-2xl font-bold tracking-tight">데일리 루틴 & 스트릭</h1>
+          <button onclick="editDashboardTitle()" class="theme-muted hover:text-inherit text-xs px-2 py-1 rounded theme-subtle" title="제목 수정">✎ 수정</button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl theme-subtle">
+          <span class="text-xs font-medium theme-muted mr-1">무드</span>
+          <button onclick="setTheme('sage')" id="theme-btn-sage" class="theme-dot" style="background: linear-gradient(135deg, #F6F5F0 50%, #5F7464 50%);" title="세이지"></button>
+          <button onclick="setTheme('mono')" id="theme-btn-mono" class="theme-dot" style="background: linear-gradient(135deg, #F4F4F5 50%, #18181B 50%);" title="모노"></button>
+          <button onclick="setTheme('terracotta')" id="theme-btn-terracotta" class="theme-dot" style="background: linear-gradient(135deg, #FBF7F4 50%, #B85D43 50%);" title="테라코타"></button>
+          <button onclick="setTheme('dark')" id="theme-btn-dark" class="theme-dot" style="background: linear-gradient(135deg, #202227 50%, #8EA896 50%);" title="다크"></button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="resetWeekChecks()" class="px-3 py-1.5 text-xs font-medium rounded-xl theme-subtle hover:opacity-80 transition">체크 초기화</button>
+          <button onclick="resetToDefault()" class="px-3 py-1.5 text-xs font-medium rounded-xl badge-secondary hover:opacity-80 transition">기본값 복원</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 핵심 요약 카드 (KPI) -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="theme-card p-5 rounded-2xl flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium theme-muted">오늘의 달성도</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded badge-accent" id="today-fraction">0 / 0</span>
+        </div>
+        <div class="mt-3"><span class="text-3xl font-bold tracking-tight" id="today-percent">0%</span></div>
+        <div class="w-full theme-subtle h-1.5 rounded-full mt-3 overflow-hidden">
+          <div id="today-progress-bar" class="progress-bar-fill h-full rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="theme-card p-5 rounded-2xl flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium theme-muted">주간 누적 달성도</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded badge-secondary" id="week-fraction">0 / 0</span>
+        </div>
+        <div class="mt-3"><span class="text-3xl font-bold tracking-tight" id="week-percent">0%</span></div>
+        <div class="w-full theme-subtle h-1.5 rounded-full mt-3 overflow-hidden">
+          <div id="week-progress-bar" class="progress-bar-secondary h-full rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="theme-card p-5 rounded-2xl flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium theme-muted">이번 주 최장 연속</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded theme-subtle">STREAK</span>
+        </div>
+        <div class="mt-3 flex items-baseline gap-2">
+          <span class="text-3xl font-bold tracking-tight" style="color: var(--secondary);" id="best-streak">0일</span>
+          <span class="text-xs theme-muted truncate" id="best-streak-habit">기록 없음</span>
+        </div>
+        <p class="text-xs theme-muted mt-3">가장 길게 이어간 루틴 기록</p>
+      </div>
+    </section>
+
+    <!-- 요일별 일일 투두리스트 섹션 -->
+    <section class="theme-card p-5 rounded-2xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b theme-border pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold">📌 일일 투두리스트</span>
+          <span class="text-xs theme-muted" id="todo-subtitle">요일별로 그날의 할 일을 관리하세요</span>
+        </div>
+        <!-- 요일 탭 -->
+        <div class="flex items-center gap-1 bg-[var(--bg-main)] p-1 rounded-xl" id="todo-day-tabs">
+          <!-- JS 렌더링 -->
+        </div>
+      </div>
+
+      <!-- 투두 추가 입력폼 -->
+      <div class="flex gap-2">
+        <input 
+          type="text" 
+          id="todo-input-box" 
+          placeholder="선택한 요일에 추가할 할 일을 입력하세요..." 
+          autocomplete="off"
+          spellcheck="false"
+          class="flex-1 px-4 py-2.5 rounded-xl text-sm theme-subtle"
+          onkeydown="if(event.key==='Enter' && !event.isComposing) handleAddTodo()"
+        >
+        <button onclick="handleAddTodo()" class="px-5 py-2.5 text-sm font-semibold rounded-xl btn-accent whitespace-nowrap">+ 할 일 추가</button>
+      </div>
+
+      <!-- 투두 목록 -->
+      <ul id="todo-list" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+        <!-- JS 렌더링 -->
+      </ul>
+      <div id="todo-empty" class="hidden py-4 text-center text-xs theme-muted">이 요일에 등록된 할 일이 없습니다.</div>
+    </section>
+
+    <!-- 새 루틴 추가 폼 -->
+    <section class="theme-card p-4 rounded-2xl">
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <select id="habit-cat-select" class="px-3.5 py-2.5 rounded-xl text-sm font-medium theme-subtle">
+          <option value="작업·학습">작업·학습</option>
+          <option value="드로잉·창작">드로잉·창작</option>
+          <option value="건강·루틴">건강·루틴</option>
+          <option value="취미·교양">취미·교양</option>
+        </select>
+        <input 
+          type="text" 
+          id="habit-title-input" 
+          placeholder="추가할 일일 루틴을 입력하세요..." 
+          autocomplete="off"
+          spellcheck="false"
+          class="flex-1 px-4 py-2.5 rounded-xl text-sm theme-subtle"
+          onkeydown="if(event.key==='Enter' && !event.isComposing) handleAddHabit()"
+        >
+        <button onclick="handleAddHabit()" class="px-5 py-2.5 text-sm font-semibold rounded-xl btn-accent whitespace-nowrap">+ 루틴 추가</button>
+      </div>
+    </section>
+
+    <!-- 주간 루틴 체크 매트릭스 -->
+    <section class="theme-card rounded-2xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b theme-border text-xs font-semibold theme-muted">
+              <th class="py-4 pl-6 pr-4 min-w-[220px]">목표 리스트</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-0">월</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-1">화</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-2">수</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-3">목</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-4">금</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-5">토</th>
+              <th class="py-4 px-2 text-center w-12" id="th-day-6">일</th>
+              <th class="py-4 px-4 text-center w-28">스트릭</th>
+              <th class="py-4 pl-2 pr-6 text-right w-16">관리</th>
+            </tr>
+          </thead>
+          <tbody id="habit-list-body" class="text-sm">
+            <!-- JS 렌더링 -->
+          </tbody>
+        </table>
+      </div>
+      
+      <div id="empty-state" class="hidden py-12 text-center">
+        <p class="theme-muted text-sm">등록된 루틴이 없습니다. 위 입력창에서 새로운 일일 목표를 추가해 보세요.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'habit_dash_v5_habits';
+    const TODO_KEY = 'habit_dash_v5_todos';
+    const THEME_KEY = 'habit_dash_v5_theme';
+    const META_KEY = 'habit_dash_v5_meta';
+    const DAYS_KR = ['월', '화', '수', '목', '금', '토', '일'];
+
+    const DEFAULT_HABITS = [
+      { id: 'h1', category: '드로잉·창작', title: '아이패드 크로키 & 스케치 20분', days: [true, true, true, true, false, false, false] },
+      { id: 'h2', category: '작업·학습', title: '설계 스튜디오 레퍼런스 아카이빙', days: [true, false, true, true, true, false, false] },
+      { id: 'h3', category: '취미·교양', title: '프랑스어 표현 5문장 소리내어 읽기', days: [true, true, true, false, false, false, false] },
+      { id: 'h4', category: '건강·루틴', title: '스트레칭 및 수면 7시간 이상 확보', days: [false, true, true, true, true, false, false] }
+    ];
+
+    let habits = [];
+    let todos = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+    let activeTodoDay = 0;
+    let dashMeta = { title: '데일리 루틴 & 스트릭', badge: 'WEEKLY LOG' };
+
+    function getTodayIndex() {
+      const jsDay = new Date().getDay();
+      return jsDay === 0 ? 6 : jsDay - 1;
+    }
+
+    function setTheme(themeName) {
+      document.documentElement.setAttribute('data-theme', themeName);
+      localStorage.setItem(THEME_KEY, themeName);
+      ['sage', 'mono', 'terracotta', 'dark'].forEach(t => {
+        const btn = document.getElementById(`theme-btn-${t}`);
+        if (btn) {
+          if (t === themeName) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+    }
+
+    function initDashboard() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'sage';
+      setTheme(savedTheme);
+
+      activeTodoDay = getTodayIndex();
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}. ${String(now.getDate()).padStart(2, '0')} (${DAYS_KR[activeTodoDay]})`;
+      document.getElementById('today-date-display').textContent = dateStr;
+
+      loadData();
+      renderAll();
+    }
+
+    function loadData() {
+      try {
+        const savedHabits = localStorage.getItem(STORAGE_KEY);
+        habits = savedHabits ? JSON.parse(savedHabits) : JSON.parse(JSON.stringify(DEFAULT_HABITS));
+
+        const savedTodos = localStorage.getItem(TODO_KEY);
+        if (savedTodos) todos = JSON.parse(savedTodos);
+
+        const savedMeta = localStorage.getItem(META_KEY);
+        if (savedMeta) dashMeta = JSON.parse(savedMeta);
+      } catch (e) {
+        habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+      localStorage.setItem(TODO_KEY, JSON.stringify(todos));
+      localStorage.setItem(META_KEY, JSON.stringify(dashMeta));
+    }
+
+    function calculateStreak(daysArray) {
+      let currentStreak = 0, maxStreak = 0;
+      for (let i = 0; i < daysArray.length; i++) {
+        if (daysArray[i]) {
+          currentStreak++;
+          if (currentStreak > maxStreak) maxStreak = currentStreak;
+        } else {
+          currentStreak = 0;
+        }
+      }
+      return maxStreak;
+    }
+
+    function toggleCheck(habitId, dayIndex) {
+      const habit = habits.find(h => h.id === habitId);
+      if (habit) {
+        habit.days[dayIndex] = !habit.days[dayIndex];
+        saveData();
+        renderAll();
+      }
+    }
+
+    // 루틴 추가 핸들러
+    window.handleAddHabit = function() {
+      const catEl = document.getElementById('habit-cat-select');
+      const titleEl = document.getElementById('habit-title-input');
+      const title = titleEl.value.trim();
+      
+      if (!title) {
+        titleEl.focus();
+        return;
+      }
+
+      habits.push({
+        id: 'h_' + Date.now(),
+        category: catEl.value,
+        title: title,
+        days: [false, false, false, false, false, false, false]
+      });
+
+      titleEl.value = '';
+      saveData();
+      renderAll();
+    };
+
+    window.deleteHabit = function(habitId) {
+      habits = habits.filter(h => h.id !== habitId);
+      saveData();
+      renderAll();
+    };
+
+    window.editHabitInline = function(habitId) {
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) return;
+
+      const newTitle = prompt('루틴 제목을 수정하세요:', habit.title);
+      if (newTitle !== null && newTitle.trim() !== '') {
+        habit.title = newTitle.trim();
+        const newCat = prompt('카테고리를 입력하세요 (작업·학습, 드로잉·창작, 건강·루틴, 취미·교양 등):', habit.category);
+        if (newCat !== null && newCat.trim() !== '') {
+          habit.category = newCat.trim();
+        }
+        saveData();
+        renderAll();
+      }
+    };
+
+    window.editDashboardTitle = function() {
+      const newTitle = prompt('대시보드 제목을 수정하세요:', dashMeta.title);
+      if (newTitle !== null && newTitle.trim() !== '') {
+        dashMeta.title = newTitle.trim();
+        const newBadge = prompt('상단 배지 텍스트를 수정하세요:', dashMeta.badge);
+        if (newBadge !== null && newBadge.trim() !== '') {
+          dashMeta.badge = newBadge.trim();
+        }
+        saveData();
+        renderAll();
+      }
+    };
+
+    // 투두 추가 핸들러
+    window.handleAddTodo = function() {
+      const input = document.getElementById('todo-input-box');
+      const text = input.value.trim();
+
+      if (!text) {
+        input.focus();
+        return;
+      }
+
+      if (!todos[activeTodoDay]) todos[activeTodoDay] = [];
+      todos[activeTodoDay].push({ id: 't_' + Date.now(), text: text, completed: false });
+
+      input.value = '';
+      saveData();
+      renderAll();
+    };
+
+    window.toggleTodo = function(todoId) {
+      const list = todos[activeTodoDay];
+      if (!list) return;
+      const item = list.find(t => t.id === todoId);
+      if (item) {
+        item.completed = !item.completed;
+        saveData();
+        renderAll();
+      }
+    };
+
+    window.deleteTodo = function(todoId) {
+      todos[activeTodoDay] = todos[activeTodoDay].filter(t => t.id !== todoId);
+      saveData();
+      renderAll();
+    };
+
+    window.setTodoDay = function(dayIdx) {
+      activeTodoDay = dayIdx;
+      renderAll();
+    };
+
+    function resetWeekChecks() {
+      habits.forEach(h => { h.days = [false, false, false, false, false, false, false]; });
+      saveData();
+      renderAll();
+    }
+
+    function resetToDefault() {
+      if (confirm('모든 데이터를 초기 샘플 상태로 되돌리시겠습니까?')) {
+        habits = JSON.parse(JSON.stringify(DEFAULT_HABITS));
+        todos = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+        dashMeta = { title: '데일리 루틴 & 스트릭', badge: 'WEEKLY LOG' };
+        saveData();
+        renderAll();
+      }
+    }
+
+    function renderAll() {
+      document.getElementById('dash-title-text').textContent = dashMeta.title;
+      document.getElementById('dash-badge').textContent = dashMeta.badge;
+
+      const todayIdx = getTodayIndex();
+
+      // 요일 헤더 강조
+      for (let d = 0; d < 7; d++) {
+        const th = document.getElementById(`th-day-${d}`);
+        if (th) {
+          if (d === todayIdx) {
+            th.innerHTML = `<span class="inline-flex items-center justify-center w-6 h-6 rounded-full btn-accent text-xs font-bold">${DAYS_KR[d]}</span>`;
+          } else {
+            th.textContent = DAYS_KR[d];
+          }
+        }
+      }
+
+      renderHabitsTable(todayIdx);
+      renderTodos();
+    }
+
+    function renderHabitsTable(todayIdx) {
+      const tbody = document.getElementById('habit-list-body');
+      const emptyState = document.getElementById('empty-state');
+      tbody.innerHTML = '';
+
+      if (habits.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      let todayCompleted = 0, weekCompleted = 0;
+      const totalHabits = habits.length;
+      const totalWeekSlots = totalHabits * 7;
+      let bestStreakCount = 0, bestStreakTitle = '기록 없음';
+
+      habits.forEach((habit, idx) => {
+        const streak = calculateStreak(habit.days);
+        const habitWeekCount = habit.days.filter(Boolean).length;
+        weekCompleted += habitWeekCount;
+        if (habit.days[todayIdx]) todayCompleted++;
+
+        if (streak > bestStreakCount) {
+          bestStreakCount = streak;
+          bestStreakTitle = habit.title;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = idx !== habits.length - 1 ? 'border-b theme-border' : '';
+
+        let dayButtonsHtml = '';
+        for (let d = 0; d < 7; d++) {
+          const isDone = habit.days[d];
+          const isToday = d === todayIdx;
+          dayButtonsHtml += `
+            <td class="py-3.5 px-2 text-center" style="${isToday ? 'background-color: var(--bg-today);' : ''}">
+              <button 
+                onclick="toggleCheck('${habit.id}', ${d})"
+                class="check-btn w-8 h-8 rounded-lg ${isDone ? 'completed' : ''} inline-flex items-center justify-center font-bold text-xs"
+                title="${DAYS_KR[d]}요일 체크"
+              >✓</button>
+            </td>
+          `;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3.5 pl-6 pr-4">
+            <div class="flex flex-col gap-1">
+              <span class="inline-block w-fit text-[11px] font-medium px-2 py-0.5 rounded theme-subtle theme-muted">${escapeHtml(habit.category)}</span>
+              <span class="font-medium cursor-pointer hover:opacity-75 transition" onclick="editHabitInline('${habit.id}')" title="클릭하여 수정">${escapeHtml(habit.title)}</span>
+            </div>
+          </td>
+          ${dayButtonsHtml}
+          <td class="py-3.5 px-4 text-center">
+            <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${streak >= 3 ? 'badge-secondary' : 'theme-subtle theme-muted'}">
+              <span>${streak}일 연속</span>
+            </div>
+          </td>
+          <td class="py-3.5 pl-2 pr-6 text-right space-x-1">
+            <button onclick="editHabitInline('${habit.id}')" class="theme-muted hover:opacity-100 opacity-50 transition p-1" title="수정">✎</button>
+            <button onclick="deleteHabit('${habit.id}')" class="theme-muted hover:opacity-100 opacity-50 transition p-1" title="삭제">✕</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const todayPct = totalHabits > 0 ? Math.round((todayCompleted / totalHabits) * 100) : 0;
+      const weekPct = totalWeekSlots > 0 ? Math.round((weekCompleted / totalWeekSlots) * 100) : 0;
+
+      document.getElementById('today-fraction').textContent = `${todayCompleted} / ${totalHabits}`;
+      document.getElementById('today-percent').textContent = `${todayPct}%`;
+      document.getElementById('today-progress-bar').style.width = `${todayPct}%`;
+
+      document.getElementById('week-fraction').textContent = `${weekCompleted} / ${totalWeekSlots}`;
+      document.getElementById('week-percent').textContent = `${weekPct}%`;
+      document.getElementById('week-progress-bar').style.width = `${weekPct}%`;
+
+      document.getElementById('best-streak').textContent = `${bestStreakCount}일`;
+      document.getElementById('best-streak-habit').textContent = bestStreakCount > 0 ? bestStreakTitle : '체크 박스를 눌러 시작하세요';
+    }
+
+    function renderTodos() {
+      const tabsContainer = document.getElementById('todo-day-tabs');
+      tabsContainer.innerHTML = '';
+      DAYS_KR.forEach((day, idx) => {
+        const isSelected = idx === activeTodoDay;
+        const isToday = idx === getTodayIndex();
+        const btn = document.createElement('button');
+        btn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition ${isSelected ? 'btn-accent shadow-sm' : 'theme-muted hover:opacity-80'}`;
+        btn.textContent = `${day}요일${isToday ? ' (오늘)' : ''}`;
+        btn.onclick = () => setTodoDay(idx);
+        tabsContainer.appendChild(btn);
+      });
+
+      document.getElementById('todo-subtitle').textContent = `${DAYS_KR[activeTodoDay]}요일 집중 투두리스트`;
+
+      const listEl = document.getElementById('todo-list');
+      const emptyEl = document.getElementById('todo-empty');
+      listEl.innerHTML = '';
+
+      const currentTodoList = todos[activeTodoDay] || [];
+      if (currentTodoList.length === 0) {
+        emptyEl.classList.remove('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+      }
+
+      currentTodoList.forEach(todo => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center justify-between p-3 rounded-xl theme-subtle transition';
+        li.innerHTML = `
+          <label class="flex items-center gap-3 cursor-pointer flex-1 select-none">
+            <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}')" class="w-4 h-4 rounded accent-[var(--accent)] cursor-pointer">
+            <span class="text-sm ${todo.completed ? 'line-through theme-muted' : ''}">${escapeHtml(todo.text)}</span>
+          </label>
+          <button onclick="deleteTodo('${todo.id}')" class="theme-muted hover:text-rose-500 transition px-2 text-xs">삭제</button>
+        `;
+        listEl.appendChild(li);
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m];
+      });
+    }
+
+    initDashboard();
+  </script>
+</body>
+</html>
